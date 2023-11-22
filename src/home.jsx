@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from "react-router-dom";
 import {
   ChakraProvider,
   CSSReset,
@@ -21,17 +22,23 @@ function Home() {
   const [createRoomModalOpen, setCreateRoomModalOpen] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [roomIdInput, setRoomIdInput] = useState('');
-
+  const navigate = useNavigate();
+  const generateRandomId = () => {
+    return Math.floor(100000 + Math.random() * 900000);
+  };
   const handleJoinRoom = () => {
     
     console.log('Joining room:', nameInput, roomIdInput);
     setJoinRoomModalOpen(false);
+    navigate(`/newpage/${roomIdInput}?name=${encodeURIComponent(nameInput)}`);
   };
 
   const handleCreateRoom = () => {
-    // Add your logic for creating a room here
     console.log('Creating room:', nameInput);
     setCreateRoomModalOpen(false);
+    const roomId = generateRandomId();
+    console.log('Generated Room ID:', roomId);
+    navigate(`/newpage/${roomId}?name=${encodeURIComponent(nameInput)}`);
   };
 
   return (
