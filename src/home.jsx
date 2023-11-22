@@ -30,7 +30,7 @@ function Home() {
     
     console.log('Joining room:', nameInput, roomIdInput);
     setJoinRoomModalOpen(false);
-    navigate(`/newpage/${roomIdInput}?name=${encodeURIComponent(nameInput)}`);
+    navigate(`/newroom/${roomIdInput}?name=${encodeURIComponent(nameInput)}`);
   };
 
   const handleCreateRoom = () => {
@@ -38,7 +38,7 @@ function Home() {
     setCreateRoomModalOpen(false);
     const roomId = generateRandomId();
     console.log('Generated Room ID:', roomId);
-    navigate(`/newpage/${roomId}?name=${encodeURIComponent(nameInput)}`);
+    navigate(`/newroom/${roomId}?name=${encodeURIComponent(nameInput)}`);
   };
 
   return (
