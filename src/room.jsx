@@ -12,15 +12,19 @@ import {
   Text,
 } from '@chakra-ui/react';
 
+const initialWinnerState = { winner: null, line: [] };
+
 const Room = () => {
   const { id } = useParams();
   const queryParams = new URLSearchParams(window.location.search);
   const name = queryParams.get('name');
   const [socket, setSocket] = useState(null);
   const [players, setPlayers] = useState(0);
+  const [currentPlayer, setCurrentPlayer] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
-  const [grid, setGrid] = useState(Array(9).fill(null));
+  const [grid, setGrid] = useState(Array(9).fill({ player: null }));
   const [isXNext, setIsXNext] = useState(true);
+  const [winnerState, setWinnerState] = useState(initialWinnerState);
 
   useEffect(() => {
     const newSocket = io('http://localhost:3001', {
@@ -34,14 +38,14 @@ const Room = () => {
       console.log('Connected to Socket.io server in New Room');
     });
 
-    newSocket.on('updatePlayers', (numPlayers) => {
-      setPlayers(numPlayers);
-    });
+    newSocket.on('updatePlayers', (data) => {
+      setPlayers(data.numPlayers);
 
-    newSocket.on('updateGrid', ({ roomid, grid }) => {
-      if (roomid === id) {
-        setGrid(grid);
-        setIsXNext(!isXNext);
+      if (data.numPlayers === 2 && currentPlayer == null) {
+        setCurrentPlayer(data.currentPlayer);
+      }
+      if (data.numPlayers === 1) {
+        setCurrentPlayer(data.currentPlayer);
       }
     });
 
@@ -58,45 +62,116 @@ const Room = () => {
     if (players === 2) {
       const timeoutId = setTimeout(() => {
         setGameStarted(true);
-      }, 3000);
+      }, 1800);
 
-      // Clear the timeout to prevent memory leaks
       return () => clearTimeout(timeoutId);
     }
   }, [players]);
 
-  const calculateWinner = () => {
-    // Implement your logic for determining the winner
-    // Returns 'X', 'O', or null if there's no winner yet
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('data_receive', (data) => {
+      setCurrentPlayer(data.currentPlayer);
+      setIsXNext(!data.isXNext);
+
+      const newWinner = calculateWinner(data.grid);
+      setWinnerState(newWinner);
+
+      if (data.grid) {
+        const newGrid = [...data.grid];
+        setGrid(newGrid);
+        console.log('updated grid');
+      }
+    });
+  }, [socket, currentPlayer]);
+
+  const calculateWinner = (grid) => {
+    if (!grid) {
+      return null;
+    }
+
+    const winningConditions = [
+      [0, 1, 2],
+      [0, 3, 6],
+      [0, 4, 8],
+      [1, 4, 7],
+      [2, 4, 6],
+      [2, 5, 8],
+      [3, 4, 5],
+      [6, 7, 8],
+    ];
+    let check=0;
+    for (let i = 0; i < 9; i++) {
+      if (grid[i].player == null) {
+          check=1;
+          break;
+      }
+  }
+       if(check==0){
+        return { winner: 'Draw', line: [] };
+       }
+    for (let i = 0; i < winningConditions.length; i++) {
+      const [a, b, c] = winningConditions[i];
+
+      if (
+        grid[a].player &&
+        grid[a].player === grid[b].player &&
+        grid[a].player === grid[c].player
+      ) {
+        return { winner: grid[a].player, line: [a, b, c] };
+      }
+    }
+
+    return null;
   };
 
   const handleCellClick = (index) => {
-    if (!grid[index] && players === 2 && !calculateWinner()) {
+    if (!grid[index].player && players === 2 && !winnerState?.winner) {
+      const currentPlayer = isXNext ? 'X' : 'O';
+
       const newGrid = [...grid];
-      newGrid[index] = isXNext ? 'X' : 'O';
+      newGrid[index] = { player: currentPlayer };
+
       setGrid(newGrid);
       setIsXNext(!isXNext);
+      socket.emit('data_send', { roomid: id, index, currentPlayer, grid: newGrid, isXNext });
 
-      socket.emit('updateGrid', { roomid: id, grid: newGrid });
+      const newWinner = calculateWinner(newGrid);
+      setWinnerState(newWinner);
+
+      if (currentPlayer === 'X' && currentPlayer !== null) {
+        setCurrentPlayer('O');
+      } else if (currentPlayer === 'O' && currentPlayer !== null) {
+        setCurrentPlayer('X');
+      }
+
+      if (newWinner) {
+        setGameStarted(false);
+      }
     }
   };
 
-  const renderCell = (index) => (
-    <Button
-      key={index}
-      fontSize="4xl"
-      fontWeight="bold"
-      p="8"
-      borderRadius="lg"
-      color="white"
-      bg="linear-gradient(45deg, #FF6B6B 0%, #FFE66D 100%)"
-      border="2px solid #FF6B6B"
-      onClick={() => handleCellClick(index)}
-      _hover={{ bg: '#FF6B6B', color: 'white' }}
-    >
-      {grid[index]}
-    </Button>
-  );
+  const renderCell = (index) => {
+    const isWinningCell = winnerState && winnerState.line.includes(index);
+
+    return (
+      <Button
+        key={index}
+        fontSize="4xl"
+        fontWeight="bold"
+        p="8"
+        borderRadius="lg"
+        color="white"
+        bg={isWinningCell ? 'green' : 'linear-gradient(45deg, #FF6B6B 0%, #FFE66D 100%)'}
+        border={isWinningCell ? '2px solid green' : '2px solid #FF6B6B'}
+        onClick={() => handleCellClick(index)}
+        _hover={{ bg: '#FF6B6B', color: 'white' }}
+      >
+        {grid[index].player}
+      </Button>
+    );
+  };
 
   return (
     <ChakraProvider>
@@ -137,6 +212,11 @@ const Room = () => {
             <Text fontSize="2xl" mt="4">
               {isXNext ? 'X' : 'O'}'s turn
             </Text>
+            {winnerState && (
+              <Text fontSize="2xl" mt="4" color="green">
+                Winner: {winnerState.winner}
+              </Text>
+            )}
           </Flex>
         ) : (
           <Flex
