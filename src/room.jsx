@@ -213,7 +213,7 @@ const Room = () => {
               {isXNext ? 'X' : 'O'}'s turn
             </Text>
             {winnerState && (
-              <Text fontSize="2xl" mt="4" color="green">
+              <Text fontSize="3xl" mt="4" color="yellow">
                 Winner: {winnerState.winner}
               </Text>
             )}
