@@ -27,7 +27,7 @@ const Room = () => {
   const [winnerState, setWinnerState] = useState(initialWinnerState);
 
   useEffect(() => {
-    const newSocket = io('http://51.20.251.56:3005', {
+    const newSocket = io('https://tic-tac-toe-multi-p-server-ie1o.vercel.app', {
       withCredentials: true,
       extraHeaders: {
         'my-custom-header': 'abcd',
