@@ -27,7 +27,7 @@ const Room = () => {
   const [winnerState, setWinnerState] = useState(initialWinnerState);
 
   useEffect(() => {
-    const newSocket = io('https://51.20.251.56:3005', {
+    const newSocket = io('https://nodejs--singhshivansh12.repl.co', {
       withCredentials: true,
       extraHeaders: {
         'my-custom-header': 'abcd',
